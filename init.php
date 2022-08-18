@@ -20,6 +20,14 @@ function wpt_addon_wpto_table_query_args( $args, $table_ID, $atts, $column_setti
     return $args;
 }
 
+/**
+ * Getting help from github:
+ * @link https://gist.github.com/felipeelia/1214cede99a9bf27df68db3086dabf56
+ *
+ * @param [type] $orderby
+ * @param [type] $query
+ * @return void
+ */
 function featured_products_orderby( $orderby, $query ) {
 	global $wpdb;
     
@@ -29,14 +37,14 @@ function featured_products_orderby( $orderby, $query ) {
         var_dump(var_dump($orderby),$featured_product_ids);
 		if ( count( $featured_product_ids ) ) {
 			$string_of_ids = '(' . implode( ',', $featured_product_ids ) . ')';
-			$orderby       = "( {$wpdb->posts}.ID IN {$string_of_ids} ) " . $query->get( 'order' );
+			$orderby = "( {$wpdb->posts}.ID IN {$string_of_ids}) " . $query->get( 'order' )." , post_date DESC";
 		}
         var_dump($orderby);
 	}
 
 	return $orderby;
 }
-add_filter( 'posts_orderby', 'featured_products_orderby', 10, 2 );
+// add_filter( 'posts_orderby', 'featured_products_orderby', 10, 2 );
 
 // function featured_products_orderby( $orderby, $query ) {
 //     global $wpdb;
