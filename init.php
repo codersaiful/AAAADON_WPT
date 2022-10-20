@@ -78,3 +78,15 @@ add_filter( 'posts_orderby', function( $orderby, $query ) {
     return $orderby;
 
 }, 100, 2 );
+
+// Adding extra class can be helpful to design them differently
+add_filter( 'wpto_tr_class_arr', 'remove_post_class' );
+function remove_post_class( $classes ) {
+    $_featured_products = wc_get_product();
+
+    if( $_featured_products->is_featured() ) {
+        $classes[] = 'featured-top';
+    }
+
+    return $classes;
+}
