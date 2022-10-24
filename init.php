@@ -61,9 +61,9 @@ function wpt_addon_wpto_table_query_args( $args, $table_ID, $atts, $column_setti
     return $args;
 }
 
-
 // Bring the featured products at the first place in Dashboard
-add_filter( 'posts_orderby', function( $orderby, $query ) {
+add_filter( 'posts_orderby', 'wpt_featured_products_top_backend', 100, 2 );
+function wpt_featured_products_top_backend( $orderby, $query ) {
     $post_types = (array) $query->get( 'post_type' );
 
     if ( in_array( 'product', $post_types ) ) {
@@ -77,7 +77,7 @@ add_filter( 'posts_orderby', function( $orderby, $query ) {
 
     return $orderby;
 
-}, 100, 2 );
+}
 
 // Adding extra class can be helpful to design them differently
 add_filter( 'wpto_tr_class_arr', 'remove_post_class' );
