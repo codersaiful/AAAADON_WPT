@@ -1,63 +1,92 @@
-<?php 
+<?php
 /**
  * Plugin Name: AAADON Featured Product on list starting (WPT Addons)
  * Plugin URI: #
  * Description: For Featured Product at the beggining of list
  * Author: Saiful Islam
  * Author URI: https://profiles.wordpress.org/codersaiful/#content-plugins
- * 
+ *
  * Version: 1.0.0
  * Requires at least:    4.0.0
  * Tested up to:         5.8.2
  * WC requires at least: 3.7
  * WC tested up to:      6.2.2
- * 
+ *
  */
+if( ! defined( 'ABSPATH' ) ) exit;
 
+// Bring the featured products at the first place in Frontend
 add_filter( 'wpto_table_query_args', 'wpt_addon_wpto_table_query_args', 99, 6 );
 function wpt_addon_wpto_table_query_args( $args, $table_ID, $atts, $column_settings, $enabled_column_array, $column_array ){
-    
-    $args['orderby'] = 'featured_products';
-    // var_dump($args);
+    /**
+     * All the term's id from filtered products.
+     * It needs to handle more filterings like tag and others that this plugin provide.
+     * It is just a mirror code that proves the sorting potential of the featured products.
+     * More additional reviews as well as codes needed to make it robust and sophisticated.
+     */
+    $wpt_product_terms = $args['tax_query']['product_cat_IN']['terms'];
+
+    // retrieving featured all featured product ids
+    $wpt_featured_ids = array_reverse( wc_get_featured_product_ids() );
+
+    $wpt_products_ids = [];
+
+    $wpt_products = get_posts([
+        'post_type' => 'product',
+        'numberposts' => -1,
+        'tax_query' => [
+            [
+                'taxonomy' => 'product_cat',
+                'field' => 'term_id',
+                'terms' => $wpt_product_terms,
+                'include_children' => false
+            ]
+        ]
+    ]);
+
+    // Saving all products' id from selected terms
+    foreach( $wpt_products as $wpt_product ) {
+        $wpt_products_ids[] = $wpt_product->ID;
+    }
+
+    // Scrapping the featured ids that are available inside selected terms.
+    $wpt_valid_featured_id = array_intersect( $wpt_featured_ids, $wpt_products_ids );
+
+    if( ! empty( $wpt_valid_featured_id ) ) {
+        $wpt_sorted_products = array_merge( $wpt_valid_featured_id, $wpt_products_ids);
+        $args['orderby'] = 'post__in';
+        $args['post__in'] = array_unique($wpt_sorted_products);
+    }
+
     return $args;
 }
 
-/**
- * Getting help from github:
- * @link https://gist.github.com/felipeelia/1214cede99a9bf27df68db3086dabf56
- *
- * @param [type] $orderby
- * @param [type] $query
- * @return void
- */
-function featured_products_orderby( $orderby, $query ) {
-	global $wpdb;
-    
-    
-	if ( 'featured_products' == $query->get( 'orderby' ) ) {
-		$featured_product_ids = (array) wc_get_featured_product_ids();
-        // var_dump(var_dump($orderby),$featured_product_ids);
-		if ( count( $featured_product_ids ) ) {
-			$string_of_ids = '(' . implode( ',', $featured_product_ids ) . ')';
-			$orderby = "( {$wpdb->posts}.ID IN {$string_of_ids}) " . $query->get( 'order' )." , post_date DESC";
-		}
-        // var_dump($orderby);
-	}
+// Bring the featured products at the first place in Dashboard
+add_filter( 'posts_orderby', 'wpt_featured_products_top_backend', 100, 2 );
+function wpt_featured_products_top_backend( $orderby, $query ) {
+    $post_types = (array) $query->get( 'post_type' );
 
-	return $orderby;
+    if ( in_array( 'product', $post_types ) ) {
+        $wpt_featured_ids = wc_get_featured_product_ids();
+
+        if ( ! empty( $wpt_featured_ids ) ) {
+            $backend_orderby = "FIELD(wp_posts.ID,'" . implode( "','", $wpt_featured_ids ) . "') DESC";
+            $orderby = empty( $orderby ) ? $backend_orderby : "$backend_orderby, $orderby";
+        }
+    }
+
+    return $orderby;
+
 }
-add_filter( 'posts_orderby', 'featured_products_orderby', 10, 2 );
 
-// function featured_products_orderby( $orderby, $query ) {
-//     global $wpdb;
-    
-//     if ( 'featured_products' == $query->get( 'orderby' ) ) {
-//     $featured_product_ids = (array) wc_get_featured_product_ids();
-//     if ( count( $featured_product_ids ) ) {
-//     $string_of_ids = '(' . implode( ',', $featured_product_ids ) . ')';
-//     $orderby = "( {$wpdb->posts}.ID IN {$string_of_ids}) " . $query->get( 'order' )." , post_date DESC";
-//     }
-//     }
-    
-//     return $orderby;
-//     }
+// Adding extra class can be helpful to design them differently
+add_filter( 'wpto_tr_class_arr', 'remove_post_class' );
+function remove_post_class( $classes ) {
+    $_featured_products = wc_get_product();
+
+    if( $_featured_products->is_featured() ) {
+        $classes[] = 'featured-top';
+    }
+
+    return $classes;
+}
